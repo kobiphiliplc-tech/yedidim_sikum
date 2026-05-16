@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Plus, X, Settings2 } from 'lucide-react'
+import { Plus, X, Settings2, ChevronUp, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Category, SourceType } from '@/lib/types'
 
@@ -30,6 +29,7 @@ export function CategoryManager({ categories, onCategoriesChanged }: Props) {
   })
   const [adding, setAdding] = useState<SourceType | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [reordering, setReordering] = useState<string | null>(null)
 
   const byType = (type: SourceType) => categories.filter(c => c.type === type)
 
@@ -37,12 +37,31 @@ export function CategoryManager({ categories, onCategoriesChanged }: Props) {
     setForms(prev => ({ ...prev, [type]: { ...prev[type], [field]: value } }))
   }
 
+  async function handleMove(cat: Category, direction: 'up' | 'down') {
+    const siblings = byType(cat.type)
+    const idx = siblings.findIndex(c => c.id === cat.id)
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= siblings.length) return
+    const other = siblings[swapIdx]
+    setReordering(cat.id)
+    await Promise.all([
+      supabase.from('categories').update({ display_order: other.display_order ?? swapIdx + 1 }).eq('id', cat.id),
+      supabase.from('categories').update({ display_order: cat.display_order ?? idx + 1 }).eq('id', other.id),
+    ])
+    onCategoriesChanged()
+    setReordering(null)
+  }
+
   async function handleAdd(type: SourceType) {
     const { name, alias } = forms[type]
     const trimmedName = name.trim()
     if (!trimmedName) return
     setAdding(type)
-    const payload: { name: string; type: SourceType; alias?: string } = { name: trimmedName, type }
+    const currentCats = byType(type)
+    const nextOrder = currentCats.length > 0
+      ? Math.max(...currentCats.map(c => c.display_order ?? 0)) + 1
+      : 1
+    const payload: { name: string; type: SourceType; display_order: number; alias?: string } = { name: trimmedName, type, display_order: nextOrder }
     if (alias.trim()) payload.alias = alias.trim()
     const { error } = await supabase.from('categories').insert(payload)
     if (error) {
@@ -87,20 +106,38 @@ export function CategoryManager({ categories, onCategoriesChanged }: Props) {
         <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${accentClass}`}>
           {title}
         </div>
-        <div className="flex flex-wrap gap-2 mb-3 min-h-[28px]">
+        <div className="space-y-1 mb-3 min-h-[28px]">
           {cats.length === 0 && (
-            <span className="text-xs text-muted-foreground self-center">
+            <span className="text-xs text-muted-foreground">
               {type === 'regular'
                 ? 'קטגוריות שבועיות מזוהות אוטומטית מהטקסט'
                 : 'אין קטגוריות'}
             </span>
           )}
-          {cats.map(cat => (
-            <Badge key={cat.id} variant="outline" className="gap-1.5 pl-1 text-xs">
-              <span>
+          {cats.map((cat, idx) => (
+            <div key={cat.id} className="flex items-center gap-1 rounded-md border px-2 py-1 bg-background text-sm">
+              <div className="flex flex-col shrink-0">
+                <button
+                  onClick={() => handleMove(cat, 'up')}
+                  disabled={idx === 0 || reordering === cat.id}
+                  className="text-gray-400 hover:text-foreground disabled:opacity-20 transition-colors"
+                  title="הזז למעלה"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => handleMove(cat, 'down')}
+                  disabled={idx === cats.length - 1 || reordering === cat.id}
+                  className="text-gray-400 hover:text-foreground disabled:opacity-20 transition-colors"
+                  title="הזז למטה"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              </div>
+              <span className="flex-1 text-right">
                 {cat.name}
                 {cat.alias && (
-                  <span className="text-muted-foreground"> ({cat.alias})</span>
+                  <span className="text-muted-foreground text-xs"> ({cat.alias})</span>
                 )}
               </span>
               <button
@@ -111,7 +148,7 @@ export function CategoryManager({ categories, onCategoriesChanged }: Props) {
               >
                 <X className="w-3 h-3" />
               </button>
-            </Badge>
+            </div>
           ))}
         </div>
 

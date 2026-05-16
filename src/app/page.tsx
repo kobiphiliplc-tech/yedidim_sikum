@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +37,11 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false)
 
   const loadCategories = useCallback(async () => {
-    const { data, error } = await supabase.from('categories').select('*').order('name')
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('type')
+      .order('display_order', { ascending: true, nullsFirst: false })
     if (error) console.error('[categories]', error)
     setCategories((data as Category[]) ?? [])
   }, [supabase])
@@ -85,7 +89,7 @@ export default function DashboardPage() {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
-        supabase.from('categories').select('*').order('name'),
+        supabase.from('categories').select('*').order('type').order('display_order', { ascending: true, nullsFirst: false }),
         supabase
           .from('settings')
           .select('key, value')
@@ -189,7 +193,7 @@ export default function DashboardPage() {
       toast.error('אין נתונים להעתקה')
       return
     }
-    const groups = groupEvents(events)
+    const groups = groupEvents(events, categories)
     const text = generateSummary(
       groups,
       settings,
@@ -220,7 +224,7 @@ export default function DashboardPage() {
       <header className="sticky top-0 z-10 border-b bg-white/95 backdrop-blur-sm">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold">ידידים דוד</h1>
+            <h1 className="text-lg font-bold">ידידים</h1>
             <span className="text-xs text-muted-foreground hidden sm:inline">|</span>
             <span className="text-xs text-muted-foreground hidden sm:inline">סיכום שבועי</span>
           </div>
@@ -274,7 +278,7 @@ export default function DashboardPage() {
         <WeeklyDataView events={events} loading={loadingEvents} />
 
         {/* Summary */}
-        <SummaryPanel events={events} settings={settings} />
+        <SummaryPanel events={events} settings={settings} categories={categories} />
 
         {/* Leaderboard image generator */}
         <LeaderboardPanel
@@ -287,7 +291,7 @@ export default function DashboardPage() {
                 })
               : '—'
           }
-          orgName="ידידים דוד"
+          orgName="ידידים"
         />
 
         {/* Settings */}

@@ -12,6 +12,7 @@ export interface Category {
   name: string        // full display name (shown in WhatsApp message)
   alias: string | null  // optional short name used in pasted text
   type: SourceType
+  display_order: number | null
 }
 
 export interface Event {

@@ -1,6 +1,6 @@
-import type { Event, CategoryGroup, AppSettings } from '@/lib/types'
+import type { Event, CategoryGroup, AppSettings, Category } from '@/lib/types'
 
-export function groupEvents(events: Event[]): CategoryGroup[] {
+export function groupEvents(events: Event[], categories: Category[] = []): CategoryGroup[] {
   const map = new Map<string, CategoryGroup>()
 
   for (const ev of events) {
@@ -33,11 +33,21 @@ export function groupEvents(events: Event[]): CategoryGroup[] {
     }
   }
 
-  const ORDER: Record<string, number> = { regular: 0, extra: 1, emergency: 2 }
+  const TYPE_ORDER: Record<string, number> = { regular: 0, extra: 1, emergency: 2 }
+
+  const orderMap = new Map<string, number>()
+  for (const cat of categories) {
+    if (cat.display_order != null) {
+      orderMap.set(`${cat.type}::${cat.name}`, cat.display_order)
+    }
+  }
 
   return Array.from(map.values()).sort((a, b) => {
-    const diff = (ORDER[a.source_type] ?? 9) - (ORDER[b.source_type] ?? 9)
-    if (diff !== 0) return diff
+    const typeDiff = (TYPE_ORDER[a.source_type] ?? 9) - (TYPE_ORDER[b.source_type] ?? 9)
+    if (typeDiff !== 0) return typeDiff
+    const aOrder = orderMap.get(`${a.source_type}::${a.category}`) ?? Infinity
+    const bOrder = orderMap.get(`${b.source_type}::${b.category}`) ?? Infinity
+    if (aOrder !== bOrder) return aOrder - bOrder
     return a.category.localeCompare(b.category, 'he')
   })
 }

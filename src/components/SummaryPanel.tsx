@@ -11,21 +11,22 @@ import {
 } from '@/lib/summaryGenerator'
 import { Copy } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Event, AppSettings } from '@/lib/types'
+import type { Event, AppSettings, Category } from '@/lib/types'
 
 interface Props {
   events: Event[]
   settings: AppSettings
+  categories: Category[]
 }
 
-export function SummaryPanel({ events, settings }: Props) {
+export function SummaryPanel({ events, settings, categories }: Props) {
   const summary = useMemo(() => {
     if (events.length === 0) return ''
-    const groups = groupEvents(events)
+    const groups = groupEvents(events, categories)
     const uniqueVolunteers = countUniqueVolunteers(events)
     const totalEvents = countTotalEvents(groups)
     return generateSummary(groups, settings, uniqueVolunteers, totalEvents)
-  }, [events, settings])
+  }, [events, settings, categories])
 
   async function handleCopy() {
     if (!summary) return
