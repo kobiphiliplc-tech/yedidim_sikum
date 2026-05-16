@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import puppeteer from 'puppeteer-core'
 import path from 'path'
 import fs from 'fs'
-import Anthropic from '@anthropic-ai/sdk'
 
 interface LeaderboardEntry {
   name: string
@@ -11,7 +10,6 @@ interface LeaderboardEntry {
 
 interface RequestBody {
   entries?: LeaderboardEntry[]
-  rawText?: string
   weekLabel: string
   orgName: string
   totalCalls: number
@@ -33,27 +31,6 @@ const BAR_COLORS = [
   '#AB47BC',
   '#42A5F5',
 ]
-
-async function parseWithClaude(rawText: string): Promise<LeaderboardEntry[]> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const msg = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
-    messages: [
-      {
-        role: 'user',
-        content: `Parse the following text into a JSON array of {"name": "...", "value": N} objects sorted descending by value.
-Return ONLY valid JSON, no markdown fences, no explanation.
-
-Text:
-${rawText}`,
-      },
-    ],
-  })
-  const raw = (msg.content[0] as { type: string; text: string }).text.trim()
-  const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
-  return JSON.parse(cleaned) as LeaderboardEntry[]
-}
 
 function podiumCard(entry: LeaderboardEntry, medal: string, highlighted: boolean): string {
   const border = highlighted
@@ -160,17 +137,13 @@ function buildHtml(params: {
 export async function POST(req: NextRequest) {
   try {
     const body: RequestBody = await req.json()
-    const { rawText, weekLabel, orgName, totalCalls } = body
+    const { weekLabel, orgName, totalCalls } = body
 
-    let entries: LeaderboardEntry[]
-
-    if (rawText && rawText.trim().length > 0) {
-      entries = await parseWithClaude(rawText)
-    } else if (body.entries && body.entries.length > 0) {
-      entries = body.entries
-    } else {
-      return NextResponse.json({ error: 'entries or rawText required' }, { status: 400 })
+    if (!body.entries || body.entries.length === 0) {
+      return NextResponse.json({ error: 'entries required' }, { status: 400 })
     }
+
+    let entries: LeaderboardEntry[] = body.entries
 
     entries = [...entries].sort((a, b) => b.value - a.value)
 
