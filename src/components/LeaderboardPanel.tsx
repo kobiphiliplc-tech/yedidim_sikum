@@ -140,7 +140,7 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
               <div
                 style={{
                   background: '#ffffff',
-                  padding: '12px 16px',
+                  padding: '12px 16px 0',
                   display: 'flex',
                   flexDirection: 'column',
                   borderBottom: '1px solid #f0f0f0',
@@ -215,26 +215,30 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
                 <div style={{ fontSize: '11px', fontWeight: 600, color: '#95A5A6', marginBottom: '8px' }}>
                   {topEntries.length === 1 ? 'המוביל' : `${topEntries.length} מובילים`}
                 </div>
-                {topEntries.map((entry, i) => {
-                  const widthPct = Math.round((entry.value / maxValue) * 100)
-                  const color = BAR_COLORS[i % BAR_COLORS.length]
-                  return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <div style={{ width: '16px', fontSize: '11px', fontWeight: 700, color: '#95A5A6', flexShrink: 0, textAlign: 'left' }}>
-                        {i + 1}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+                  {topEntries.map((entry, i) => {
+                    const widthPct = Math.round((entry.value / maxValue) * 100)
+                    const color = BAR_COLORS[i % BAR_COLORS.length]
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '14px', fontSize: '11px', fontWeight: 700, color: '#95A5A6', flexShrink: 0, textAlign: 'left' }}>
+                          {i + 1}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#2C3E50', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {entry.name}
+                          </span>
+                          <div style={{ height: '6px', background: '#F0F0F0', borderRadius: '99px', overflow: 'hidden' }}>
+                            <div style={{ width: `${widthPct}%`, height: '100%', background: color, borderRadius: '99px' }} />
+                          </div>
+                        </div>
+                        <div style={{ width: '22px', fontSize: '11px', color: '#95A5A6', flexShrink: 0, textAlign: 'left' }}>
+                          {entry.value}
+                        </div>
                       </div>
-                      <div style={{ width: '90px', fontSize: '12px', fontWeight: 600, color: '#2C3E50', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {entry.name}
-                      </div>
-                      <div style={{ flex: 1, background: '#F0F0F0', borderRadius: '4px', height: '12px', overflow: 'hidden' }}>
-                        <div style={{ width: `${widthPct}%`, height: '100%', background: color, borderRadius: '4px' }} />
-                      </div>
-                      <div style={{ width: '28px', fontSize: '12px', fontWeight: 700, color: '#2C3E50', flexShrink: 0, textAlign: 'right' }}>
-                        {entry.value}
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
             </div>
           </div>
