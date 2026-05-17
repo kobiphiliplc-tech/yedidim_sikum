@@ -157,7 +157,7 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
                 </div>
 
                 {/* Left (second in RTL): image + total calls */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '5px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/image_sikum_shavua.png"
