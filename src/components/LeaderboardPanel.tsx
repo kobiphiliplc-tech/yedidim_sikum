@@ -117,7 +117,7 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
           <div
             ref={cardRef}
             style={{
-              padding: '12px',
+              padding: '12px 12px 20px',
               background: '#f3f4f6',
               borderRadius: '12px',
               direction: 'rtl',
@@ -132,7 +132,7 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
                 borderRadius: '12px',
                 overflow: 'hidden',
                 fontFamily: 'system-ui, Arial, sans-serif',
-                border: '0.5px solid #e0e0e0',
+                border: '1px solid #e0e0e0',
               }}
             >
               {/* Header */}
@@ -141,13 +141,13 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
                   background: '#ffffff',
                   padding: '12px 16px',
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   justifyContent: 'space-between',
                   borderBottom: '1px solid #f0f0f0',
                 }}
               >
                 {/* Right (first in RTL): title */}
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', paddingTop: '4px' }}>
                   <div style={{ fontSize: '27px', fontWeight: 800, color: '#1a1a2e' }}>
                     כוכבי השבוע ⭐
                   </div>
