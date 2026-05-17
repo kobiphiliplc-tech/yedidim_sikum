@@ -106,7 +106,7 @@ export function generateSummary(
       const lines = group.entries.map(e => `${e.volunteer_name} - ${e.count}`)
       return [header, ...lines].join('\n')
     } else {
-      const header = `*${group.category}*`
+      const header = `*${group.category} ${group.total_incidents}*`
       const lines = group.incidents.map(
         (inc, i) => `${i + 1}. ${inc.volunteers.join(', ')}`
       )

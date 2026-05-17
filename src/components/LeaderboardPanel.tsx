@@ -2,6 +2,7 @@
 
 import { useRef, useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { groupEvents, countTotalEvents } from '@/lib/summaryGenerator'
 import type { Event } from '@/lib/types'
 
 interface Props {
@@ -46,8 +47,8 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
   }, [entries])
 
   const totalCalls = useMemo(
-    () => entries.reduce((sum, e) => sum + e.value, 0),
-    [entries]
+    () => countTotalEvents(groupEvents(events)),
+    [events]
   )
 
   const first  = topEntries[0] ?? { name: '—', value: 0 }
@@ -141,23 +142,17 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
                   background: '#ffffff',
                   padding: '12px 16px',
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
+                  flexDirection: 'column',
                   borderBottom: '1px solid #f0f0f0',
                 }}
               >
-                {/* Right (first in RTL): title */}
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e' }}>
-                    כוכבי השבוע ⭐
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#95A5A6', marginTop: '2px' }}>
-                    {orgName}
-                  </div>
+                {/* Title - centered */}
+                <div style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e', textAlign: 'center', marginBottom: '8px' }}>
+                  כוכבי השבוע ⭐
                 </div>
 
-                {/* Left (second in RTL): image + total calls */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                {/* Bottom row: image (right in RTL = first in DOM) + total calls badge (left in RTL) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/image_sikum_shavua.png"
