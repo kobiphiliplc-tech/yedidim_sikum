@@ -147,8 +147,13 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
                 }}
               >
                 {/* Title - centered */}
-                <div style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e', textAlign: 'center', marginBottom: '8px' }}>
-                  כוכבי השבוע ⭐
+                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e' }}>
+                    כוכבי השבוע ⭐
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#6b7280', marginTop: '2px' }}>
+                    סניף פתח-תקווה
+                  </div>
                 </div>
 
                 {/* Bottom row: image (right in RTL = first in DOM) + total calls badge (left in RTL) */}
