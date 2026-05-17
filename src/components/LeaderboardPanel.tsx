@@ -148,7 +148,7 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
               >
                 {/* Right (first in RTL): title */}
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '27px', fontWeight: 800, color: '#1a1a2e' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e' }}>
                     כוכבי השבוע ⭐
                   </div>
                   <div style={{ fontSize: '13px', color: '#95A5A6', marginTop: '2px' }}>
