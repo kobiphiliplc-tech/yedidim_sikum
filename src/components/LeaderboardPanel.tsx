@@ -137,35 +137,29 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
               }}
             >
               {/* Header */}
-              <div
-                style={{
-                  background: '#ffffff',
-                  padding: '12px 16px 0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  borderBottom: '1px solid #f0f0f0',
-                }}
-              >
-                {/* Title - centered */}
-                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#1a1a2e' }}>
-                    כוכבי השבוע ⭐
+              <div style={{ background: '#ffffff', borderBottom: '1px solid #f0f0f0' }}>
+                {/* Top row: title+subtitle on right (first in RTL DOM), logo on left */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px 10px' }}>
+                  <div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e' }}>
+                      כוכבי השבוע ⭐
+                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#6b7280', marginTop: '2px' }}>
+                      סניף פתח-תקווה
+                    </div>
                   </div>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#6b7280', marginTop: '2px' }}>
-                    סניף פתח-תקווה
-                  </div>
-                </div>
-
-                {/* Bottom row: image (right in RTL = first in DOM) + total calls badge (left in RTL) */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/image_sikum_shavua.png"
-                    alt=""
-                    style={{ width: '72px', height: '72px', objectFit: 'contain' }}
+                    src="/logo_new.png"
+                    alt="ידידים"
+                    style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
                   />
+                </div>
+                {/* Bottom strip: total count badge */}
+                <div style={{ borderTop: '0.5px solid #e8e8e8', padding: '6px 16px' }}>
                   <div
                     style={{
+                      display: 'inline-block',
                       background: '#f3f4f6',
                       color: '#555',
                       borderRadius: '20px',
