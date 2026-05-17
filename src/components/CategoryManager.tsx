@@ -110,7 +110,7 @@ export function CategoryManager({ categories, onCategoriesChanged }: Props) {
           {cats.length === 0 && (
             <span className="text-xs text-muted-foreground">
               {type === 'regular'
-                ? 'קטגוריות שבועיות מזוהות אוטומטית מהטקסט'
+                ? 'הוסף קטגוריות כדי לקבוע את סדר הופעתן בדוח — קטגוריות שלא הוגדרו יופיעו בסוף לפי סדר אלפביתי'
                 : 'אין קטגוריות'}
             </span>
           )}

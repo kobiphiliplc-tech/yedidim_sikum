@@ -10,14 +10,9 @@
   "dir": "rtl",
   "icons": [
     {
-      "src": "/logo.jpg",
-      "sizes": "192x192",
-      "type": "image/jpeg"
-    },
-    {
-      "src": "/logo.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg"
+      "src": "/logo_new.png",
+      "sizes": "200x200",
+      "type": "image/png"
     }
   ]
 }

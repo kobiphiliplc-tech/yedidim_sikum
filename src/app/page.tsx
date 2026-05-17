@@ -298,6 +298,10 @@ export default function DashboardPage() {
         <Separator />
         <CategoryManager categories={categories} onCategoriesChanged={loadCategories} />
         <SettingsPanel settings={settings} onSettingsChanged={loadSettings} />
+
+        <p className="text-center text-xs text-gray-400 pt-2">
+          נבנה ע&quot;י קובי פיליפ 0526255232
+        </p>
       </main>
 
       {/* ── Sticky bottom bar ── */}
@@ -331,3 +335,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+
