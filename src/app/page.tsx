@@ -35,6 +35,11 @@ export default function DashboardPage() {
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([])
   const [saving, setSaving] = useState(false)
+  const [allWeeks, setAllWeeks] = useState<Week[]>([])
+  const [weekEventCounts, setWeekEventCounts] = useState<Record<string, number>>({})
+  const [viewingWeekId, setViewingWeekId] = useState<string | null>(null)
+  const [viewingEvents, setViewingEvents] = useState<Event[]>([])
+  const [loadingViewingEvents, setLoadingViewingEvents] = useState(false)
 
   const loadCategories = useCallback(async () => {
     const { data, error } = await supabase
@@ -78,6 +83,20 @@ export default function DashboardPage() {
     [supabase]
   )
 
+  const loadAllWeeks = useCallback(async () => {
+    const [weeksRes, eventWeeksRes] = await Promise.all([
+      supabase.from('weeks').select('*').order('created_at', { ascending: false }),
+      supabase.from('events').select('week_id'),
+    ])
+    if (weeksRes.error) console.error('[allWeeks]', weeksRes.error)
+    setAllWeeks((weeksRes.data as Week[]) ?? [])
+    const counts: Record<string, number> = {}
+    for (const e of (eventWeeksRes.data ?? [])) {
+      counts[e.week_id] = (counts[e.week_id] ?? 0) + 1
+    }
+    setWeekEventCounts(counts)
+  }, [supabase])
+
   const loadBootstrap = useCallback(async () => {
     setLoadingBootstrap(true)
     try {
@@ -111,13 +130,14 @@ export default function DashboardPage() {
         footer: map['footer_template'] ?? '',
         emergencyHeader: map['emergency_header_template'] ?? '',
       })
+      await loadAllWeeks()
     } catch (err) {
       console.error('[bootstrap failed]', err)
       toast.error('שגיאת חיבור — בדוק את הגדרות Supabase')
     } finally {
       setLoadingBootstrap(false)
     }
-  }, [supabase])
+  }, [supabase, loadAllWeeks])
 
   useEffect(() => { loadBootstrap() }, [loadBootstrap])
 
@@ -171,6 +191,7 @@ export default function DashboardPage() {
       .eq('id', activeWeek.id)
     if (error) throw error
     setActiveWeek({ ...activeWeek, status: 'closed' })
+    await loadAllWeeks()
   }
 
   async function handleOpenNewWeek() {
@@ -186,6 +207,55 @@ export default function DashboardPage() {
     setActiveWeek(data as Week)
     setEvents([])
     setParsedRows([])
+    await loadAllWeeks()
+  }
+
+  async function handleDeleteWeek(weekId: string) {
+    const isDeletingActive = weekId === activeWeek?.id
+    const { error } = await supabase.from('weeks').delete().eq('id', weekId)
+    if (error) throw error
+
+    if (isDeletingActive) {
+      const { data: lastClosed } = await supabase
+        .from('weeks')
+        .select('*')
+        .eq('status', 'closed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (lastClosed) {
+        await supabase.from('weeks').update({ status: 'active' }).eq('id', lastClosed.id)
+        const reactivated = { ...lastClosed, status: 'active' } as Week
+        setActiveWeek(reactivated)
+        await loadEvents(reactivated.id)
+      } else {
+        setActiveWeek(null)
+        setEvents([])
+      }
+    }
+
+    if (weekId === viewingWeekId) {
+      setViewingWeekId(null)
+      setViewingEvents([])
+    }
+    await loadAllWeeks()
+  }
+
+  async function handleViewWeek(weekId: string) {
+    if (viewingWeekId === weekId) {
+      setViewingWeekId(null)
+      setViewingEvents([])
+      return
+    }
+    setViewingWeekId(weekId)
+    setLoadingViewingEvents(true)
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('week_id', weekId)
+      .order('created_at', { ascending: true })
+    setViewingEvents((data as Event[]) ?? [])
+    setLoadingViewingEvents(false)
   }
 
   async function handleCopySummary() {
@@ -249,7 +319,14 @@ export default function DashboardPage() {
           activeWeek={activeWeek}
           onCloseWeek={handleCloseWeek}
           onOpenNewWeek={handleOpenNewWeek}
+          onDeleteWeek={handleDeleteWeek}
+          onViewWeek={handleViewWeek}
           eventCount={events.length}
+          allWeeks={allWeeks}
+          weekEventCounts={weekEventCounts}
+          viewingWeekId={viewingWeekId}
+          viewingEvents={viewingEvents}
+          loadingViewingEvents={loadingViewingEvents}
         />
 
         <Separator />
