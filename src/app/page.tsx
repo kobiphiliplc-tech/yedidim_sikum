@@ -20,7 +20,7 @@ import {
   countTotalEvents,
 } from '@/lib/summaryGenerator'
 import { toast } from 'sonner'
-import type { Week, Category, Event, ParsedRow, AppSettings } from '@/lib/types'
+import type { Week, Category, Event, ParsedRow, AppSettings, SourceType } from '@/lib/types'
 
 const DEFAULT_SETTINGS: AppSettings = { header: '', footer: '', emergencyHeader: '' }
 
@@ -73,6 +73,7 @@ export default function DashboardPage() {
         .select('*')
         .eq('week_id', weekId)
         .order('created_at', { ascending: true })
+        .order('sort_order', { ascending: true })
       if (error) {
         console.error('[events]', error)
         toast.error('שגיאה בטעינת נתונים')
@@ -163,13 +164,14 @@ export default function DashboardPage() {
     setSaving(true)
     const payload = parsedRows
       .filter(r => r.category.trim() && r.volunteer_name.trim())
-      .map(r => ({
+      .map((r, i) => ({
         week_id: activeWeek.id,
         category: r.category.trim(),
         volunteer_name: r.volunteer_name.trim(),
         count: r.count,
         source_type: r.source_type,
         incident_id: r.incident_id,
+        sort_order: i,
       }))
 
     const { error } = await supabase.from('events').insert(payload)
@@ -208,6 +210,20 @@ export default function DashboardPage() {
     setEvents([])
     setParsedRows([])
     await loadAllWeeks()
+  }
+
+  async function handleRenameVolunteer(incidentId: string, oldName: string, newName: string) {
+    if (!activeWeek) return
+    const { error } = await supabase
+      .from('events')
+      .update({ volunteer_name: newName })
+      .eq('incident_id', incidentId)
+      .eq('volunteer_name', oldName)
+    if (error) {
+      toast.error('שגיאה בשינוי שם: ' + error.message)
+      throw error
+    }
+    await loadEvents(activeWeek.id)
   }
 
   async function handleDeleteWeek(weekId: string) {
@@ -254,6 +270,7 @@ export default function DashboardPage() {
       .select('*')
       .eq('week_id', weekId)
       .order('created_at', { ascending: true })
+      .order('sort_order', { ascending: true })
     setViewingEvents((data as Event[]) ?? [])
     setLoadingViewingEvents(false)
   }
@@ -352,7 +369,11 @@ export default function DashboardPage() {
         <Separator />
 
         {/* Saved data */}
-        <WeeklyDataView events={events} loading={loadingEvents} />
+        <WeeklyDataView
+          events={events}
+          loading={loadingEvents}
+          onRenameVolunteer={!isWeekClosed ? handleRenameVolunteer : undefined}
+        />
 
         {/* Summary */}
         <SummaryPanel events={events} settings={settings} categories={categories} />

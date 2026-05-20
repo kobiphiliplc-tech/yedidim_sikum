@@ -2,7 +2,7 @@
 
 import { useRef, useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { groupEvents, countTotalEvents } from '@/lib/summaryGenerator'
+import { groupEvents, countTotalEvents, countUniqueVolunteers } from '@/lib/summaryGenerator'
 import type { Event } from '@/lib/types'
 
 interface Props {
@@ -50,6 +50,8 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
     () => countTotalEvents(groupEvents(events)),
     [events]
   )
+
+  const uniqueVolunteers = useMemo(() => countUniqueVolunteers(events), [events])
 
   const first  = topEntries[0] ?? { name: '—', value: 0 }
   const second = topEntries[1] ?? { name: '—', value: 0 }
@@ -155,8 +157,8 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
                     style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
                   />
                 </div>
-                {/* Bottom strip: total count badge */}
-                <div style={{ borderTop: '0.5px solid #e8e8e8', padding: '6px 16px' }}>
+                {/* Bottom strip: total count badge + volunteers */}
+                <div style={{ borderTop: '0.5px solid #e8e8e8', padding: '6px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div
                     style={{
                       display: 'inline-block',
@@ -170,6 +172,20 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
                     }}
                   >
                     {`סה"כ ${totalCalls} קריאות`}
+                  </div>
+                  <div
+                    style={{
+                      display: 'inline-block',
+                      background: '#f3f4f6',
+                      color: '#555',
+                      borderRadius: '20px',
+                      padding: '3px 10px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {`ע"י ${uniqueVolunteers} מתנדבים`}
                   </div>
                 </div>
               </div>
