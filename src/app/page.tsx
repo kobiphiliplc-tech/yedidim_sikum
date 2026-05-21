@@ -11,6 +11,7 @@ import { SummaryPanel } from '@/components/SummaryPanel'
 import { WeekManager } from '@/components/WeekManager'
 import { CategoryManager } from '@/components/CategoryManager'
 import { SettingsPanel } from '@/components/SettingsPanel'
+import { VolunteerListPanel } from '@/components/VolunteerListPanel'
 import { LeaderboardPanel } from '@/components/LeaderboardPanel'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -396,6 +397,7 @@ export default function DashboardPage() {
         <Separator />
         <CategoryManager categories={categories} onCategoriesChanged={loadCategories} />
         <SettingsPanel settings={settings} onSettingsChanged={loadSettings} />
+        <VolunteerListPanel events={events} />
 
         <p className="text-center text-xs text-gray-400 pt-2">
           נבנה ע&quot;י קובי פיליפ 0526255232
