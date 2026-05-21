@@ -228,16 +228,16 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
               {/* Bar chart */}
               <div style={{ padding: '10px 12px 14px' }}>
                 <div style={{ fontSize: '11px', fontWeight: 600, color: '#95A5A6', marginBottom: '8px' }}>
-                  {topEntries.length === 1 ? 'המוביל' : `${topEntries.length} מובילים`}
+                  {topEntries.length <= 3 ? '' : `${topEntries.length - 3} מובילים נוספים`}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-                  {topEntries.map((entry, i) => {
+                  {topEntries.slice(3).map((entry, i) => {
                     const widthPct = Math.round((entry.value / maxValue) * 100)
-                    const color = BAR_COLORS[i % BAR_COLORS.length]
+                    const color = BAR_COLORS[(i + 3) % BAR_COLORS.length]
                     return (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ width: '14px', fontSize: '11px', fontWeight: 700, color: '#95A5A6', flexShrink: 0, textAlign: 'left' }}>
-                          {i + 1}
+                          {i + 4}
                         </div>
                         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
                           <span style={{ fontSize: '12px', fontWeight: 600, color: '#2C3E50', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
