@@ -68,13 +68,14 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
   const barHeight = isCompact ? 5 : 8
   const rowFontSize = isCompact ? 11 : 12
 
-  // Display scale: transform:scale doesn't shrink layout height, leaving empty space below.
-  // Measure the card and pull the wrapper up by the height the scale removed.
+  // Display scale: shrink the card to a preview size while html-to-image still captures it
+  // at full resolution. The sizer div is set to the scaled dimensions so the preview reserves
+  // the right space (no empty gap) and can scroll horizontally on narrow screens (phones).
   const CARD_SCALE = 0.78
-  const [scaleMargin, setScaleMargin] = useState(0)
+  const [cardSize, setCardSize] = useState({ w: 0, h: 0 })
   useEffect(() => {
     if (cardRef.current) {
-      setScaleMargin(-cardRef.current.offsetHeight * (1 - CARD_SCALE))
+      setCardSize({ w: cardRef.current.offsetWidth, h: cardRef.current.offsetHeight })
     }
   }, [topEntries])
 
@@ -136,9 +137,15 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
             {topEntries.length} מובילים מתוך {entries.length} · {totalCalls} קריאות סה&quot;כ
           </p>
 
-          {/* Display-only scale wrapper — shrinks for screen fit; cardRef still captures full-res */}
-          <div style={{ width: '100%', overflowX: 'hidden', direction: 'rtl' }}>
-            <div style={{ transform: `scale(${CARD_SCALE})`, transformOrigin: 'right top', marginBottom: `${scaleMargin}px` }}>
+          {/* Preview wrapper — horizontally scrollable on narrow screens; cardRef still captures full-res.
+              outer = scroll area · sizer = scaled dimensions (clips layout overflow) · scaler = visual shrink */}
+          <div style={{ width: '100%', overflowX: 'auto', direction: 'rtl' }}>
+            <div style={{
+              width: cardSize.w ? `${cardSize.w * CARD_SCALE}px` : undefined,
+              height: cardSize.h ? `${cardSize.h * CARD_SCALE}px` : undefined,
+              overflow: 'hidden',
+            }}>
+              <div style={{ transform: `scale(${CARD_SCALE})`, transformOrigin: 'top right', display: 'inline-block' }}>
 
           {/* Summary card — captured by html-to-image */}
           <div
@@ -310,8 +317,9 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
             </div>
           </div>
 
-            </div>{/* end scale wrapper */}
-          </div>{/* end overflow wrapper */}
+              </div>{/* end scaler */}
+            </div>{/* end sizer */}
+          </div>{/* end scroll wrapper */}
 
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
         </CardContent>
