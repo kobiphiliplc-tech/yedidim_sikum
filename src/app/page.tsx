@@ -390,7 +390,7 @@ export default function DashboardPage() {
                 })
               : '—'
           }
-          orgName="ידידים"
+          orgName="סניף פתח-תקווה"
         />
 
         {/* Settings */}

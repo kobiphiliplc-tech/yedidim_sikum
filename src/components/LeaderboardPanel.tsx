@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useMemo } from 'react'
+import { useRef, useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { groupEvents, countTotalEvents, countUniqueVolunteers } from '@/lib/summaryGenerator'
 import type { Event } from '@/lib/types'
@@ -57,6 +57,26 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
   const second = topEntries[1] ?? { name: '—', value: 0 }
   const third  = topEntries[2] ?? { name: '—', value: 0 }
   const maxValue = first.value || 1
+  // Bar chart: rank #4 is the 100% baseline, others are relative to it
+  const barMaxValue = topEntries[3]?.value || 1
+  // Compress rows when there are many entries so the card stays a fixed height
+  const barList = topEntries.slice(3)
+  const barGap = barList.length <= 5 ? 10 : barList.length <= 7 ? 8 : 5
+  // Compact mode: smaller row elements when there are many entries
+  const isCompact = barList.length > 8
+  const circleSize = isCompact ? 18 : 22
+  const barHeight = isCompact ? 5 : 8
+  const rowFontSize = isCompact ? 11 : 12
+
+  // Display scale: transform:scale doesn't shrink layout height, leaving empty space below.
+  // Measure the card and pull the wrapper up by the height the scale removed.
+  const CARD_SCALE = 0.78
+  const [scaleMargin, setScaleMargin] = useState(0)
+  useEffect(() => {
+    if (cardRef.current) {
+      setScaleMargin(-cardRef.current.offsetHeight * (1 - CARD_SCALE))
+    }
+  }, [topEntries])
 
   async function handleShare() {
     if (!cardRef.current || entries.length === 0) return
@@ -66,7 +86,7 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
       const { toPng } = await import('html-to-image')
       const dataUrl = await toPng(cardRef.current, {
         pixelRatio: 2.5,
-        backgroundColor: '#f3f4f6',
+        backgroundColor: '#1B2A4A',
       })
       const res = await fetch(dataUrl)
       const blob = await res.blob()
@@ -116,147 +136,182 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
             {topEntries.length} מובילים מתוך {entries.length} · {totalCalls} קריאות סה&quot;כ
           </p>
 
+          {/* Display-only scale wrapper — shrinks for screen fit; cardRef still captures full-res */}
+          <div style={{ width: '100%', overflowX: 'hidden', direction: 'rtl' }}>
+            <div style={{ transform: `scale(${CARD_SCALE})`, transformOrigin: 'right top', marginBottom: `${scaleMargin}px` }}>
+
           {/* Summary card — captured by html-to-image */}
           <div
             ref={cardRef}
             style={{
-              padding: '12px 12px 20px',
-              background: '#f3f4f6',
-              borderRadius: '12px',
+              padding: '16px',
+              background: '#1B2A4A',
+              borderRadius: '16px',
               direction: 'rtl',
+              display: 'inline-block',
+              fontFamily: 'system-ui, sans-serif',
             }}
           >
             <div
               style={{
-                width: '100%',
-                maxWidth: '400px',
-                margin: '0 auto',
-                background: '#ffffff',
-                borderRadius: '12px',
+                width: '680px',
+                background: '#1B2A4A',
+                borderRadius: '14px',
                 overflow: 'hidden',
-                fontFamily: 'system-ui, Arial, sans-serif',
-                border: '1px solid #e0e0e0',
+                fontFamily: 'system-ui, sans-serif',
+                border: '1.5px solid #2D4170',
               }}
             >
-              {/* Header */}
-              <div style={{ background: '#ffffff', borderBottom: '1px solid #f0f0f0' }}>
-                {/* Top row: title+subtitle on right (first in RTL DOM), logo on left */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px 10px' }}>
-                  <div>
-                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#1a1a2e' }}>
-                      כוכבי השבוע ⭐
-                    </div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#6b7280', marginTop: '2px' }}>
-                      סניף פתח-תקווה
-                    </div>
+              {/* Header — white strip */}
+              <div style={{
+                background: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 24px',
+              }}>
+                {/* Title + subtitle — FIRST in JSX → RIGHT visually in RTL */}
+                <div>
+                  <div style={{ fontSize: '30px', fontWeight: 800, color: '#1a1a2e', lineHeight: 1.1 }}>
+                    כוכבי השבוע ⭐
                   </div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/logo_new.png"
-                    alt="ידידים"
-                    style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
-                  />
-                </div>
-                {/* Bottom strip: total count badge + volunteers */}
-                <div style={{ borderTop: '0.5px solid #e8e8e8', padding: '6px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div
-                    style={{
-                      display: 'inline-block',
-                      background: '#f3f4f6',
-                      color: '#555',
-                      borderRadius: '20px',
-                      padding: '3px 10px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {`סה"כ ${totalCalls} קריאות`}
-                  </div>
-                  <div
-                    style={{
-                      display: 'inline-block',
-                      background: '#f3f4f6',
-                      color: '#555',
-                      borderRadius: '20px',
-                      padding: '3px 10px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {`ע"י ${uniqueVolunteers} מתנדבים`}
+                  <div style={{ fontSize: '15px', fontWeight: 500, color: '#6b7280', marginTop: '4px' }}>
+                    {orgName}
                   </div>
                 </div>
+                {/* Logo — SECOND in JSX → LEFT visually in RTL */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo_new.png"
+                  alt="ידידים"
+                  style={{ height: '64px', width: 'auto', objectFit: 'contain' }}
+                />
               </div>
 
-              {/* Podium */}
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '8px',
-                  padding: '14px 12px',
-                  background: '#f8f9fa',
-                }}
-              >
-                {/* 3rd */}
-                <div style={{ flex: 1, background: '#fff', borderRadius: '10px', padding: '10px 6px', textAlign: 'center', border: '1.5px solid #E8E8E8' }}>
-                  <div style={{ fontSize: '24px', lineHeight: 1 }}>🥉</div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#2C3E50', marginTop: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{third.name}</div>
-                  <div style={{ fontSize: '17px', fontWeight: 800, color: '#2C3E50' }}>{third.value}</div>
-                  <div style={{ fontSize: '10px', color: '#95A5A6' }}>קריאות</div>
-                </div>
-                {/* 1st */}
-                <div style={{ flex: 1, background: '#fff', borderRadius: '10px', padding: '10px 6px', textAlign: 'center', border: '2.5px solid #F39C12' }}>
-                  <div style={{ fontSize: '28px', lineHeight: 1 }}>🥇</div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#2C3E50', marginTop: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{first.name}</div>
-                  <div style={{ fontSize: '20px', fontWeight: 800, color: '#2C3E50' }}>{first.value}</div>
-                  <div style={{ fontSize: '10px', color: '#95A5A6' }}>קריאות</div>
-                </div>
-                {/* 2nd */}
-                <div style={{ flex: 1, background: '#fff', borderRadius: '10px', padding: '10px 6px', textAlign: 'center', border: '1.5px solid #E8E8E8' }}>
-                  <div style={{ fontSize: '24px', lineHeight: 1 }}>🥈</div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#2C3E50', marginTop: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{second.name}</div>
-                  <div style={{ fontSize: '17px', fontWeight: 800, color: '#2C3E50' }}>{second.value}</div>
-                  <div style={{ fontSize: '10px', color: '#95A5A6' }}>קריאות</div>
-                </div>
-              </div>
+              {/* Body — two columns; padding bottom matches the sides so no extra gap below */}
+              <div style={{ display: 'flex', padding: '18px 16px 16px', background: '#1B2A4A' }}>
 
-              {/* Divider */}
-              <div style={{ height: '1px', background: '#EBEBEB', margin: '0 12px' }} />
-
-              {/* Bar chart */}
-              <div style={{ padding: '10px 12px 14px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#95A5A6', marginBottom: '8px' }}>
-                  {topEntries.length <= 3 ? '' : `${topEntries.length - 3} מובילים נוספים`}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-                  {topEntries.slice(3).map((entry, i) => {
-                    const widthPct = Math.round((entry.value / maxValue) * 100)
-                    const color = BAR_COLORS[(i + 3) % BAR_COLORS.length]
-                    return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '14px', fontSize: '11px', fontWeight: 700, color: '#95A5A6', flexShrink: 0, textAlign: 'left' }}>
-                          {i + 4}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#2C3E50', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {/* BAR LIST — FIRST in JSX → RIGHT side in RTL */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#94A3B8', marginBottom: '6px', textAlign: 'right' }}>
+                    {topEntries.length} מובילים
+                  </div>
+                  {/* barGap + isCompact compress rows when there are many entries */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: `${barGap}px` }}>
+                    {barList.map((entry, i) => {
+                      const widthPct = Math.round((entry.value / barMaxValue) * 100)
+                      const color = BAR_COLORS[(i + 3) % BAR_COLORS.length]
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {/* Rank circle — white bg, FIRST in RTL row → rightmost */}
+                          <div style={{
+                            width: `${circleSize}px`, height: `${circleSize}px`, borderRadius: '50%',
+                            background: '#FFFFFF', flexShrink: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: isCompact ? '10px' : '11px', fontWeight: 700, color: '#1B2A4A',
+                          }}>
+                            {i + 4}
+                          </div>
+                          {/* Name — fixed width so all bars start at the same position */}
+                          <span style={{
+                            fontSize: `${rowFontSize}px`, fontWeight: 400, color: '#FFFFFF',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            flexShrink: 0, width: '125px',
+                          }}>
                             {entry.name}
                           </span>
-                          <div style={{ height: '6px', background: '#F0F0F0', borderRadius: '99px', overflow: 'hidden' }}>
+                          {/* Bar track — fills remaining space, RTL flex → bar fills from right */}
+                          <div style={{ flex: 1, height: `${barHeight}px`, background: '#2D4170', borderRadius: '99px', overflow: 'hidden', display: 'flex' }}>
                             <div style={{ width: `${widthPct}%`, height: '100%', background: color, borderRadius: '99px' }} />
                           </div>
+                          {/* Call count — LAST in RTL row → leftmost */}
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', flexShrink: 0, width: '26px', textAlign: 'left' }}>
+                            {entry.value}
+                          </span>
                         </div>
-                        <div style={{ width: '22px', fontSize: '11px', color: '#95A5A6', flexShrink: 0, textAlign: 'left' }}>
-                          {entry.value}
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Vertical divider */}
+                <div style={{ width: '1px', background: '#2D4170', margin: '0 14px', flexShrink: 0 }} />
+
+                {/* PODIUM + STATS — SECOND in JSX → LEFT side in RTL; alignSelf keeps it fixed */}
+                <div style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', alignSelf: 'flex-start' }}>
+
+                  {/* Podium: JSX 3rd | 1st | 2nd → RTL: 3rd RIGHT, 1st CENTER, 2nd LEFT */}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                    {/* 3rd */}
+                    <div style={{
+                      flex: 1, background: '#243860', borderRadius: '12px',
+                      padding: '14px 8px', textAlign: 'center', border: '1.5px solid #2D4170',
+                    }}>
+                      <div style={{ fontSize: '26px', lineHeight: 1 }}>🥉</div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#FFFFFF', marginTop: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{third.name}</div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', marginTop: '2px' }}>{third.value}</div>
+                      <div style={{ fontSize: '10px', color: '#94A3B8' }}>קריאות</div>
+                    </div>
+                    {/* 1st — gold border, taller */}
+                    <div style={{
+                      flex: 1, background: '#243860', borderRadius: '12px',
+                      padding: '18px 8px', textAlign: 'center', border: '2.5px solid #F39C12',
+                    }}>
+                      <div style={{ fontSize: '32px', lineHeight: 1 }}>🥇</div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', marginTop: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{first.name}</div>
+                      <div style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginTop: '2px' }}>{first.value}</div>
+                      <div style={{ fontSize: '10px', color: '#94A3B8' }}>קריאות</div>
+                    </div>
+                    {/* 2nd */}
+                    <div style={{
+                      flex: 1, background: '#243860', borderRadius: '12px',
+                      padding: '14px 8px', textAlign: 'center', border: '1.5px solid #2D4170',
+                    }}>
+                      <div style={{ fontSize: '26px', lineHeight: 1 }}>🥈</div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#FFFFFF', marginTop: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{second.name}</div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', marginTop: '2px' }}>{second.value}</div>
+                      <div style={{ fontSize: '10px', color: '#94A3B8' }}>קריאות</div>
+                    </div>
+                  </div>
+
+                  {/* Stats — side by side; calls FIRST → right in RTL, volunteers SECOND → left.
+                      RTL natural: text block first (→ right, text-align right), icon last (→ left).
+                      fontWeight 700 is the native Hebrew bold so the word matches the number. */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* Calls — FIRST → right in RTL. minWidth:0 keeps both pills equal width */}
+                    <div style={{
+                      flex: 1, minWidth: 0, background: '#243860', borderRadius: '10px', padding: '9px 8px',
+                      border: '1px solid #2D4170', display: 'flex', alignItems: 'center', gap: '6px',
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+                          {totalCalls} קריאות
                         </div>
+                        <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>סה&quot;כ השבוע</div>
                       </div>
-                    )
-                  })}
+                      <span style={{ fontSize: '16px', flexShrink: 0 }}>📞</span>
+                    </div>
+                    {/* Volunteers — SECOND → left in RTL */}
+                    <div style={{
+                      flex: 1, minWidth: 0, background: '#243860', borderRadius: '10px', padding: '9px 8px',
+                      border: '1px solid #2D4170', display: 'flex', alignItems: 'center', gap: '6px',
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+                          {uniqueVolunteers} מתנדבים
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>פעילים בסניף</div>
+                      </div>
+                      <span style={{ fontSize: '16px', flexShrink: 0 }}>👥</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+            </div>{/* end scale wrapper */}
+          </div>{/* end overflow wrapper */}
 
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
         </CardContent>
