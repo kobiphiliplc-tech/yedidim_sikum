@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -134,7 +134,13 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer }: Props) {
     )
   }
 
-  function renderSection(title: string, sectionGroups: CategoryGroup[], accentClass: string, editable = false) {
+  const lastEmergencyIncidentId = useMemo(() => {
+    const emergencyEvents = events.filter(e => e.source_type === 'emergency')
+    if (emergencyEvents.length === 0) return null
+    return emergencyEvents[emergencyEvents.length - 1].incident_id
+  }, [events])
+
+  function renderSection(title: string, sectionGroups: CategoryGroup[], accentClass: string, editable = false, lastIncidentId: string | null = null) {
     if (sectionGroups.length === 0) return null
     return (
       <div className="space-y-1">
@@ -170,18 +176,21 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer }: Props) {
                       <span className="font-mono text-xs tabular-nums">{entry.count}</span>
                     </div>
                   ))
-                : group.incidents.map((inc, i) => (
-                    <div key={inc.incident_id} className="text-sm py-0.5 text-muted-foreground flex items-start gap-1 flex-wrap">
-                      <span className="font-mono text-xs mt-0.5 flex-shrink-0">{i + 1}.</span>
-                      <span className="inline-flex flex-wrap gap-y-0.5">
-                        {editable
-                          ? inc.volunteers.map((name, vi) =>
-                              renderVolunteerName(inc.incident_id, name, vi === inc.volunteers.length - 1)
-                            )
-                          : inc.volunteers.join(', ')}
-                      </span>
-                    </div>
-                  ))}
+                : group.incidents.map((inc, i) => {
+                    const isLast = lastIncidentId !== null && inc.incident_id === lastIncidentId
+                    return (
+                      <div key={inc.incident_id} className={`text-sm py-0.5 flex items-start gap-1 flex-wrap ${isLast ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                        <span className="font-mono text-xs mt-0.5 flex-shrink-0">{i + 1}.</span>
+                        <span className="inline-flex flex-wrap gap-y-0.5">
+                          {editable
+                            ? inc.volunteers.map((name, vi) =>
+                                renderVolunteerName(inc.incident_id, name, vi === inc.volunteers.length - 1)
+                              )
+                            : inc.volunteers.join(', ')}
+                        </span>
+                      </div>
+                    )
+                  })}
             </div>
           </details>
         ))}
@@ -200,7 +209,7 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {renderSection('אירועי חירום', emergencyGroups, 'text-red-600', !!onRenameVolunteer)}
+        {renderSection('אירועי חירום', emergencyGroups, 'text-red-600', !!onRenameVolunteer, lastEmergencyIncidentId)}
         {emergencyGroups.length > 0 && (extraGroups.length > 0 || regularGroups.length > 0) && (
           <Separator />
         )}
