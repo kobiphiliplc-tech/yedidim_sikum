@@ -24,6 +24,12 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer }: Props) {
   const [editValue, setEditValue] = useState('')
   const [editSaving, setEditSaving] = useState(false)
 
+  const lastEmergencyIncidentId = useMemo(() => {
+    const emergencyEvents = events.filter(e => e.source_type === 'emergency')
+    if (emergencyEvents.length === 0) return null
+    return emergencyEvents[emergencyEvents.length - 1].incident_id
+  }, [events])
+
   if (loading) {
     return (
       <Card>
@@ -133,12 +139,6 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer }: Props) {
       </span>
     )
   }
-
-  const lastEmergencyIncidentId = useMemo(() => {
-    const emergencyEvents = events.filter(e => e.source_type === 'emergency')
-    if (emergencyEvents.length === 0) return null
-    return emergencyEvents[emergencyEvents.length - 1].incident_id
-  }, [events])
 
   function renderSection(title: string, sectionGroups: CategoryGroup[], accentClass: string, editable = false, lastIncidentId: string | null = null) {
     if (sectionGroups.length === 0) return null
