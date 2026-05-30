@@ -1,5 +1,10 @@
 import type { ParsedRow } from '@/lib/types'
 
+export interface VolunteerTotal {
+  name: string
+  count: number
+}
+
 const SKIP_PATTERNS = [
   /^רשימת כל המתנדבים/,
   /^סה"כ/,
@@ -49,6 +54,47 @@ export function parseWeekly(text: string): ParsedRow[] {
           incident_id: crypto.randomUUID(),
         })
       }
+    }
+  }
+
+  return results
+}
+
+const VOLUNTEER_TOTAL_RE = /^(.+?)\s+(\d+)$/
+
+/**
+ * Extract the pre-computed volunteer totals section from a weekly report.
+ * Looks for a line matching sectionHeader (strips ** markdown), then parses
+ * "name count" lines (space-separated, no dash) until a non-matching line.
+ */
+export function parseVolunteerTotals(
+  text: string,
+  sectionHeader: string = 'רשימת כל המתנדבים שיצאו לסייע:'
+): VolunteerTotal[] {
+  const stripBold = (s: string) => s.replace(/\*\*/g, '').trim()
+  const headerNorm = stripBold(sectionHeader)
+  const lines = text.split('\n')
+  let inSection = false
+  const results: VolunteerTotal[] = []
+
+  for (const raw of lines) {
+    const line = stripBold(raw)
+
+    if (!inSection) {
+      if (!line) continue
+      if (line === headerNorm || line.endsWith(headerNorm)) inSection = true
+      continue
+    }
+
+    if (!line) continue
+
+    const match = VOLUNTEER_TOTAL_RE.exec(line)
+    if (match) {
+      const name = match[1].trim()
+      const count = parseInt(match[2], 10)
+      if (name && count > 0) results.push({ name, count })
+    } else {
+      break
     }
   }
 

@@ -22,8 +22,10 @@ import {
 } from '@/lib/summaryGenerator'
 import { toast } from 'sonner'
 import type { Week, Category, Event, ParsedRow, AppSettings, SourceType } from '@/lib/types'
+import type { VolunteerTotal } from '@/lib/parsers/weeklyParser'
 
-const DEFAULT_SETTINGS: AppSettings = { header: '', footer: '', emergencyHeader: '' }
+const DEFAULT_LEADERBOARD_SECTION_HEADER = 'רשימת כל המתנדבים שיצאו לסייע:'
+const DEFAULT_SETTINGS: AppSettings = { header: '', footer: '', emergencyHeader: '', leaderboardSectionHeader: DEFAULT_LEADERBOARD_SECTION_HEADER }
 
 export default function DashboardPage() {
   const supabase = createClient()
@@ -35,6 +37,8 @@ export default function DashboardPage() {
   const [loadingBootstrap, setLoadingBootstrap] = useState(true)
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([])
+  const [pendingLeaderboardTotals, setPendingLeaderboardTotals] = useState<VolunteerTotal[] | null>(null)
+  const [leaderboardTotals, setLeaderboardTotals] = useState<VolunteerTotal[] | null>(null)
   const [saving, setSaving] = useState(false)
   const [allWeeks, setAllWeeks] = useState<Week[]>([])
   const [weekEventCounts, setWeekEventCounts] = useState<Record<string, number>>({})
@@ -56,14 +60,19 @@ export default function DashboardPage() {
     const { data, error } = await supabase
       .from('settings')
       .select('key, value')
-      .in('key', ['header_template', 'footer_template', 'emergency_header_template'])
+      .in('key', ['header_template', 'footer_template', 'emergency_header_template', 'leaderboard_section_header', 'leaderboard_totals'])
     if (error) { console.error('[settings]', error); return }
     const map = Object.fromEntries((data ?? []).map(r => [r.key, r.value]))
     setSettings({
       header: map['header_template'] ?? '',
       footer: map['footer_template'] ?? '',
       emergencyHeader: map['emergency_header_template'] ?? '',
+      leaderboardSectionHeader: map['leaderboard_section_header'] ?? DEFAULT_LEADERBOARD_SECTION_HEADER,
     })
+    try {
+      const stored = map['leaderboard_totals']
+      setLeaderboardTotals(stored ? JSON.parse(stored) : null)
+    } catch { setLeaderboardTotals(null) }
   }, [supabase])
 
   const loadEvents = useCallback(
@@ -114,7 +123,7 @@ export default function DashboardPage() {
         supabase
           .from('settings')
           .select('key, value')
-          .in('key', ['header_template', 'footer_template', 'emergency_header_template']),
+          .in('key', ['header_template', 'footer_template', 'emergency_header_template', 'leaderboard_section_header', 'leaderboard_totals']),
       ])
 
       if (weekRes.error) console.error('[bootstrap weeks]', weekRes.error)
@@ -131,7 +140,12 @@ export default function DashboardPage() {
         header: map['header_template'] ?? '',
         footer: map['footer_template'] ?? '',
         emergencyHeader: map['emergency_header_template'] ?? '',
+        leaderboardSectionHeader: map['leaderboard_section_header'] ?? DEFAULT_LEADERBOARD_SECTION_HEADER,
       })
+      try {
+        const stored = map['leaderboard_totals']
+        setLeaderboardTotals(stored ? JSON.parse(stored) : null)
+      } catch { setLeaderboardTotals(null) }
       await loadAllWeeks()
     } catch (err) {
       console.error('[bootstrap failed]', err)
@@ -181,6 +195,11 @@ export default function DashboardPage() {
     } else {
       toast.success(`${payload.length} רשומות נשמרו בהצלחה`)
       setParsedRows([])
+      if (pendingLeaderboardTotals && pendingLeaderboardTotals.length > 0) {
+        await supabase.from('settings').upsert([{ key: 'leaderboard_totals', value: JSON.stringify(pendingLeaderboardTotals) }])
+        setLeaderboardTotals(pendingLeaderboardTotals)
+        setPendingLeaderboardTotals(null)
+      }
       await loadEvents(activeWeek.id)
     }
     setSaving(false)
@@ -210,6 +229,9 @@ export default function DashboardPage() {
     setActiveWeek(data as Week)
     setEvents([])
     setParsedRows([])
+    setPendingLeaderboardTotals(null)
+    setLeaderboardTotals(null)
+    await supabase.from('settings').upsert([{ key: 'leaderboard_totals', value: '[]' }])
     await loadAllWeeks()
   }
 
@@ -352,7 +374,9 @@ export default function DashboardPage() {
         {/* Paste importer */}
         <PasteImporter
           categories={categories}
-          onParsed={setParsedRows}
+          onParsed={rows => { setParsedRows(rows); setPendingLeaderboardTotals(null) }}
+          onVolunteerTotalsParsed={setPendingLeaderboardTotals}
+          leaderboardSectionHeader={settings.leaderboardSectionHeader}
           disabled={isWeekClosed}
         />
 
@@ -362,7 +386,7 @@ export default function DashboardPage() {
             rows={parsedRows}
             onRowsChange={setParsedRows}
             onSave={handleSave}
-            onDiscard={() => setParsedRows([])}
+            onDiscard={() => { setParsedRows([]); setPendingLeaderboardTotals(null) }}
             saving={saving}
           />
         )}
@@ -382,6 +406,7 @@ export default function DashboardPage() {
         {/* Leaderboard image generator */}
         <LeaderboardPanel
           events={events}
+          leaderboardOverride={leaderboardTotals}
           weekLabel={
             activeWeek
               ? new Date(activeWeek.created_at).toLocaleDateString('he-IL', {

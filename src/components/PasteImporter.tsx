@@ -5,29 +5,35 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { parseEmergencyAndExtra } from '@/lib/parsers/emergencyParser'
-import { parseWeekly } from '@/lib/parsers/weeklyParser'
+import { parseWeekly, parseVolunteerTotals } from '@/lib/parsers/weeklyParser'
 import type { Category, ParsedRow } from '@/lib/types'
+import type { VolunteerTotal } from '@/lib/parsers/weeklyParser'
 
 type ParseType = 'emergency' | 'regular'
 
 interface Props {
   categories: Category[]
   onParsed: (rows: ParsedRow[]) => void
+  onVolunteerTotalsParsed?: (totals: VolunteerTotal[]) => void
+  leaderboardSectionHeader?: string
   disabled?: boolean
 }
 
-export function PasteImporter({ categories, onParsed, disabled }: Props) {
+export function PasteImporter({ categories, onParsed, onVolunteerTotalsParsed, leaderboardSectionHeader, disabled }: Props) {
   const [text, setText] = useState('')
   const [type, setType] = useState<ParseType>('emergency')
 
   function handleParse() {
     const trimmed = text.trim()
     if (!trimmed) return
-    const rows =
-      type === 'emergency'
-        ? parseEmergencyAndExtra(trimmed, categories)
-        : parseWeekly(trimmed)
-    onParsed(rows)
+    if (type === 'emergency') {
+      onParsed(parseEmergencyAndExtra(trimmed, categories))
+    } else {
+      onParsed(parseWeekly(trimmed))
+      if (onVolunteerTotalsParsed) {
+        onVolunteerTotalsParsed(parseVolunteerTotals(trimmed, leaderboardSectionHeader))
+      }
+    }
     setText('')
   }
 

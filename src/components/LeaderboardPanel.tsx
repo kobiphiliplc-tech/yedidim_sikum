@@ -9,6 +9,7 @@ interface Props {
   events: Event[]
   weekLabel: string
   orgName: string
+  leaderboardOverride?: { name: string; count: number }[] | null
 }
 
 const BAR_COLORS = [
@@ -24,12 +25,18 @@ function WhatsAppIcon() {
   )
 }
 
-export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
+export function LeaderboardPanel({ events, weekLabel, orgName, leaderboardOverride }: Props) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [sharing, setSharing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const entries = useMemo(() => {
+    if (leaderboardOverride && leaderboardOverride.length > 0) {
+      return leaderboardOverride
+        .slice()
+        .sort((a, b) => b.count - a.count)
+        .map(e => ({ name: e.name, value: e.count }))
+    }
     const map = new Map<string, number>()
     for (const ev of events) {
       if (ev.source_type !== 'regular') continue
@@ -38,7 +45,7 @@ export function LeaderboardPanel({ events, weekLabel, orgName }: Props) {
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-  }, [events])
+  }, [events, leaderboardOverride])
 
   const topEntries = useMemo(() => {
     if (entries.length <= 10) return entries

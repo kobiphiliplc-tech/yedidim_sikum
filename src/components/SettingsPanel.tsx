@@ -17,14 +17,15 @@ export function SettingsPanel({ settings, onSettingsChanged }: Props) {
   const [header, setHeader] = useState(settings.header)
   const [footer, setFooter] = useState(settings.footer)
   const [emergencyHeader, setEmergencyHeader] = useState(settings.emergencyHeader)
+  const [leaderboardSectionHeader, setLeaderboardSectionHeader] = useState(settings.leaderboardSectionHeader)
   const [saving, setSaving] = useState(false)
 
-  // Sync if parent reloads settings
   useEffect(() => {
     setHeader(settings.header)
     setFooter(settings.footer)
     setEmergencyHeader(settings.emergencyHeader)
-  }, [settings.header, settings.footer, settings.emergencyHeader])
+    setLeaderboardSectionHeader(settings.leaderboardSectionHeader)
+  }, [settings.header, settings.footer, settings.emergencyHeader, settings.leaderboardSectionHeader])
 
   async function handleSave() {
     setSaving(true)
@@ -32,6 +33,7 @@ export function SettingsPanel({ settings, onSettingsChanged }: Props) {
       { key: 'header_template', value: header },
       { key: 'footer_template', value: footer },
       { key: 'emergency_header_template', value: emergencyHeader },
+      { key: 'leaderboard_section_header', value: leaderboardSectionHeader },
     ])
     if (error) {
       toast.error('שגיאה בשמירת הגדרות')
@@ -42,7 +44,7 @@ export function SettingsPanel({ settings, onSettingsChanged }: Props) {
     setSaving(false)
   }
 
-  const hasChanges = header !== settings.header || footer !== settings.footer || emergencyHeader !== settings.emergencyHeader
+  const hasChanges = header !== settings.header || footer !== settings.footer || emergencyHeader !== settings.emergencyHeader || leaderboardSectionHeader !== settings.leaderboardSectionHeader
 
   return (
     <details className="group">
@@ -66,6 +68,18 @@ export function SettingsPanel({ settings, onSettingsChanged }: Props) {
           <code className="bg-muted px-1 rounded">{'{total_volunteers}'}</code> — מתנדבים ייחודיים,{' '}
           <code className="bg-muted px-1 rounded">{'{emergency_count}'}</code> — אירועי חירום
         </p>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">כותרת סעיף רשימת מובילים בדו&quot;ח שבועי</label>
+          <input
+            value={leaderboardSectionHeader}
+            onChange={e => setLeaderboardSectionHeader(e.target.value)}
+            placeholder="רשימת כל המתנדבים שיצאו לסייע:"
+            dir="rtl"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <p className="text-[11px] text-muted-foreground">הכותרת שמופיעה בדו&quot;ח לפני רשימת הסיכום הכוללת</p>
+        </div>
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">כותרת סעיף אירועי חירום</label>

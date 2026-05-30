@@ -53,4 +53,5 @@ export interface AppSettings {
   header: string
   footer: string
   emergencyHeader: string
+  leaderboardSectionHeader: string
 }
