@@ -314,7 +314,7 @@ export function LeaderboardPanel({ events, weekLabel, orgName, leaderboardOverri
                         <div style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
                           {uniqueVolunteers} מתנדבים
                         </div>
-                        <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>פעילים בסניף</div>
+                        <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>פעילים השבוע</div>
                       </div>
                       <span style={{ fontSize: '16px', flexShrink: 0 }}>👥</span>
                     </div>
