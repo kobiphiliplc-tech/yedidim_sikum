@@ -95,15 +95,16 @@ export default function DashboardPage() {
   )
 
   const loadAllWeeks = useCallback(async () => {
-    const [weeksRes, eventWeeksRes] = await Promise.all([
+    const [weeksRes, countsRes] = await Promise.all([
       supabase.from('weeks').select('*').order('created_at', { ascending: false }),
-      supabase.from('events').select('week_id'),
+      supabase.rpc('get_week_event_counts'),
     ])
     if (weeksRes.error) console.error('[allWeeks]', weeksRes.error)
+    if (countsRes.error) console.error('[weekCounts]', countsRes.error)
     setAllWeeks((weeksRes.data as Week[]) ?? [])
     const counts: Record<string, number> = {}
-    for (const e of (eventWeeksRes.data ?? [])) {
-      counts[e.week_id] = (counts[e.week_id] ?? 0) + 1
+    for (const row of (countsRes.data ?? [])) {
+      counts[row.week_id] = Number(row.count)
     }
     setWeekEventCounts(counts)
   }, [supabase])
