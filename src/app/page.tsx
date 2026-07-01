@@ -250,6 +250,55 @@ export default function DashboardPage() {
     await loadEvents(activeWeek.id)
   }
 
+  async function handleDeleteVolunteer(incidentId: string, name: string) {
+    if (!activeWeek) return
+    const { error } = await supabase
+      .from('events')
+      .delete()
+      .eq('incident_id', incidentId)
+      .eq('volunteer_name', name)
+    if (error) {
+      toast.error('שגיאה במחיקה: ' + error.message)
+      throw error
+    }
+    await loadEvents(activeWeek.id)
+  }
+
+  async function handlePromoteToCategory(incidentId: string, name: string) {
+    if (!activeWeek) return
+    // Sort incident events by created_at to determine order
+    const incidentEvents = events
+      .filter(e => e.incident_id === incidentId)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    const splitIdx = incidentEvents.findIndex(e => e.volunteer_name === name)
+    if (splitIdx === -1) return
+    const toPromote = incidentEvents.slice(splitIdx + 1)
+    const promotedEvent = incidentEvents[splitIdx]
+
+    const newIncidentId = crypto.randomUUID()
+    // Update events after the split to the new category + incident
+    if (toPromote.length > 0) {
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ category: name, incident_id: newIncidentId })
+        .in('id', toPromote.map(e => e.id))
+      if (updateError) {
+        toast.error('שגיאה בעדכון: ' + updateError.message)
+        return
+      }
+    }
+    // Delete the promoted row (it was a category label, not a volunteer)
+    const { error: deleteError } = await supabase
+      .from('events')
+      .delete()
+      .eq('id', promotedEvent.id)
+    if (deleteError) {
+      toast.error('שגיאה במחיקה: ' + deleteError.message)
+      return
+    }
+    await loadEvents(activeWeek.id)
+  }
+
   async function handleDeleteWeek(weekId: string) {
     const isDeletingActive = weekId === activeWeek?.id
     const { error } = await supabase.from('weeks').delete().eq('id', weekId)
@@ -399,6 +448,8 @@ export default function DashboardPage() {
           events={events}
           loading={loadingEvents}
           onRenameVolunteer={!isWeekClosed ? handleRenameVolunteer : undefined}
+          onDeleteVolunteer={!isWeekClosed ? handleDeleteVolunteer : undefined}
+          onPromoteToCategory={!isWeekClosed ? handlePromoteToCategory : undefined}
         />
 
         {/* Summary */}

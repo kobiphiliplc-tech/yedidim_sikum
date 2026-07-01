@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Tag } from 'lucide-react'
 import type { ParsedRow } from '@/lib/types'
 
 interface Props {
@@ -15,12 +15,46 @@ interface Props {
 }
 
 export function ParsedPreview({ rows, onRowsChange, onSave, onDiscard, saving }: Props) {
-  function updateRow(key: string, field: keyof Omit<ParsedRow, '_key' | 'source_type'>, value: string | number) {
+  function updateCategory(key: string, value: string) {
+    const row = rows.find(r => r._key === key)
+    if (!row) return
+    onRowsChange(rows.map(r =>
+      r.incident_id === row.incident_id ? { ...r, category: value } : r
+    ))
+  }
+
+  function updateRow(key: string, field: keyof Omit<ParsedRow, '_key' | 'source_type' | 'category'>, value: string | number) {
     onRowsChange(rows.map(r => (r._key === key ? { ...r, [field]: value } : r)))
   }
 
   function deleteRow(key: string) {
     onRowsChange(rows.filter(r => r._key !== key))
+  }
+
+  // Promotes a volunteer row to be a new category boundary.
+  // Rows from this row onward (within the same incident) get a new incident + the row's name as category.
+  // The promoted row itself is removed (it was the category label, not a volunteer).
+  function promoteToCategory(key: string) {
+    const row = rows.find(r => r._key === key)
+    if (!row) return
+
+    const newIncidentId = crypto.randomUUID()
+    const newCategory = row.volunteer_name
+    const incidentKeys = rows
+      .filter(r => r.incident_id === row.incident_id)
+      .map(r => r._key)
+    const splitIdx = incidentKeys.indexOf(key)
+
+    const keysToPromote = new Set(incidentKeys.slice(splitIdx + 1))
+
+    onRowsChange(
+      rows
+        .filter(r => r._key !== key)
+        .map(r => {
+          if (!keysToPromote.has(r._key)) return r
+          return { ...r, category: newCategory, incident_id: newIncidentId }
+        })
+    )
   }
 
   if (rows.length === 0) return null
@@ -63,18 +97,27 @@ export function ParsedPreview({ rows, onRowsChange, onSave, onDiscard, saving }:
                   <td className="px-3 py-2">
                     <input
                       value={row.category}
-                      onChange={e => updateRow(row._key, 'category', e.target.value)}
+                      onChange={e => updateCategory(row._key, e.target.value)}
                       className="w-full bg-transparent outline-none border-b border-transparent hover:border-gray-300 focus:border-primary py-0.5"
                       dir="rtl"
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input
-                      value={row.volunteer_name}
-                      onChange={e => updateRow(row._key, 'volunteer_name', e.target.value)}
-                      className="w-full bg-transparent outline-none border-b border-transparent hover:border-gray-300 focus:border-primary py-0.5"
-                      dir="rtl"
-                    />
+                    <div className="flex items-center gap-1">
+                      <input
+                        value={row.volunteer_name}
+                        onChange={e => updateRow(row._key, 'volunteer_name', e.target.value)}
+                        className="flex-1 bg-transparent outline-none border-b border-transparent hover:border-gray-300 focus:border-primary py-0.5"
+                        dir="rtl"
+                      />
+                      <button
+                        onClick={() => promoteToCategory(row._key)}
+                        className="text-gray-300 hover:text-blue-500 transition-colors p-1 flex-shrink-0"
+                        title="הפוך לקטגוריה – שורות אחריו ישויכו לקטגוריה זו"
+                      >
+                        <Tag className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <input

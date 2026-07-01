@@ -6,12 +6,15 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { groupEvents, countTotalEvents } from '@/lib/summaryGenerator'
+import { Trash2, Tag } from 'lucide-react'
 import type { Event, CategoryGroup } from '@/lib/types'
 
 interface Props {
   events: Event[]
   loading: boolean
   onRenameVolunteer?: (incidentId: string, oldName: string, newName: string) => Promise<void>
+  onDeleteVolunteer?: (incidentId: string, name: string) => Promise<void>
+  onPromoteToCategory?: (incidentId: string, name: string) => Promise<void>
 }
 
 interface EditingVolunteer {
@@ -19,7 +22,7 @@ interface EditingVolunteer {
   oldName: string
 }
 
-export function WeeklyDataView({ events, loading, onRenameVolunteer }: Props) {
+export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVolunteer, onPromoteToCategory }: Props) {
   const [editing, setEditing] = useState<EditingVolunteer | null>(null)
   const [editValue, setEditValue] = useState('')
   const [editSaving, setEditSaving] = useState(false)
@@ -135,6 +138,24 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer }: Props) {
             ✎
           </button>
         )}
+        {onPromoteToCategory && (
+          <button
+            onClick={() => onPromoteToCategory(incidentId, name)}
+            className="text-gray-300 hover:text-blue-500 transition-colors p-0.5 leading-none"
+            title="הפוך לקטגוריה – השמות אחריו ישויכו לקריאה חדשה"
+          >
+            <Tag className="w-3 h-3" />
+          </button>
+        )}
+        {onDeleteVolunteer && (
+          <button
+            onClick={() => onDeleteVolunteer(incidentId, name)}
+            className="text-gray-300 hover:text-red-500 transition-colors p-0.5 leading-none"
+            title="מחק"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        )}
         {!isLast && <span className="mr-0.5">,</span>}
       </span>
     )
@@ -209,11 +230,11 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {renderSection('אירועי חירום', emergencyGroups, 'text-red-600', !!onRenameVolunteer, lastEmergencyIncidentId)}
+        {renderSection('אירועי חירום', emergencyGroups, 'text-red-600', !!(onRenameVolunteer || onDeleteVolunteer || onPromoteToCategory), lastEmergencyIncidentId)}
         {emergencyGroups.length > 0 && (extraGroups.length > 0 || regularGroups.length > 0) && (
           <Separator />
         )}
-        {renderSection('קטגוריות נוספות', extraGroups, 'text-orange-600', !!onRenameVolunteer)}
+        {renderSection('קטגוריות נוספות', extraGroups, 'text-orange-600', !!(onRenameVolunteer || onDeleteVolunteer || onPromoteToCategory))}
         {extraGroups.length > 0 && regularGroups.length > 0 && <Separator />}
         {renderSection('סטטיסטיקה שבועית', regularGroups, 'text-blue-600')}
       </CardContent>
