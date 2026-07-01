@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { groupEvents, countTotalEvents } from '@/lib/summaryGenerator'
 import { Trash2, Tag, Pencil } from 'lucide-react'
 import type { Event, CategoryGroup } from '@/lib/types'
@@ -22,11 +23,17 @@ interface EditingVolunteer {
   oldName: string
 }
 
+type PendingAction =
+  | { type: 'rename'; incidentId: string; oldName: string; newName: string }
+  | { type: 'delete'; incidentId: string; name: string }
+  | { type: 'promote'; incidentId: string; name: string }
+
 export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVolunteer, onPromoteToCategory }: Props) {
   const [editing, setEditing] = useState<EditingVolunteer | null>(null)
   const [editValue, setEditValue] = useState('')
   const [editSaving, setEditSaving] = useState(false)
   const [editMode, setEditMode] = useState(false)
+  const [pending, setPending] = useState<PendingAction | null>(null)
 
   const canEdit = !!(onRenameVolunteer || onDeleteVolunteer || onPromoteToCategory)
 
@@ -72,26 +79,44 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
   const regularGroups = groups.filter(g => g.source_type === 'regular')
   const totalActions = countTotalEvents(groups)
 
-  async function saveEdit() {
-    if (!editing || !onRenameVolunteer) return
+  async function confirmAction() {
+    if (!pending) return
+    setPending(null)
+    if (pending.type === 'rename' && onRenameVolunteer) {
+      setEditSaving(true)
+      try { await onRenameVolunteer(pending.incidentId, pending.oldName, pending.newName) }
+      finally { setEditSaving(false); setEditing(null) }
+    } else if (pending.type === 'delete' && onDeleteVolunteer) {
+      await onDeleteVolunteer(pending.incidentId, pending.name)
+    } else if (pending.type === 'promote' && onPromoteToCategory) {
+      await onPromoteToCategory(pending.incidentId, pending.name)
+    }
+  }
+
+  function requestSaveEdit() {
+    if (!editing) return
     const trimmed = editValue.trim()
-    if (!trimmed || trimmed === editing.oldName) {
-      setEditing(null)
-      return
-    }
-    if (!window.confirm(`לשנות את "${editing.oldName}" ל-"${trimmed}"?`)) return
-    setEditSaving(true)
-    try {
-      await onRenameVolunteer(editing.incidentId, editing.oldName, trimmed)
-    } finally {
-      setEditSaving(false)
-      setEditing(null)
-    }
+    if (!trimmed || trimmed === editing.oldName) { setEditing(null); return }
+    setPending({ type: 'rename', incidentId: editing.incidentId, oldName: editing.oldName, newName: trimmed })
   }
 
   function startEdit(incidentId: string, name: string) {
     setEditing({ incidentId, oldName: name })
     setEditValue(name)
+  }
+
+  function confirmTitle() {
+    if (!pending) return ''
+    if (pending.type === 'rename') return `לשנות את "${pending.oldName}" ל-"${pending.newName}"?`
+    if (pending.type === 'delete') return `למחוק את "${pending.name}"?`
+    return `להפוך את "${pending.name}" לקטגוריה?`
+  }
+
+  function confirmDescription() {
+    if (!pending) return undefined
+    if (pending.type === 'promote')
+      return 'השמות שאחריו באותו אירוע ישויכו לקריאה חדשה עם קטגוריה זו.'
+    return undefined
   }
 
   function renderVolunteerName(incidentId: string, name: string, isLast: boolean) {
@@ -104,7 +129,7 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
             value={editValue}
             onChange={e => setEditValue(e.target.value)}
             onKeyDown={e => {
-              if (e.key === 'Enter') saveEdit()
+              if (e.key === 'Enter') requestSaveEdit()
               if (e.key === 'Escape') setEditing(null)
             }}
             disabled={editSaving}
@@ -113,7 +138,7 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
             dir="rtl"
           />
           <button
-            onClick={saveEdit}
+            onClick={requestSaveEdit}
             disabled={editSaving}
             className="text-[11px] bg-blue-500 hover:bg-blue-600 text-white px-1.5 py-0.5 rounded disabled:opacity-50"
           >
@@ -144,10 +169,7 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
         )}
         {onPromoteToCategory && editMode && (
           <button
-            onClick={() => {
-              if (window.confirm(`להפוך את "${name}" לקטגוריה? השמות אחריו באותו אירוע ישויכו לקריאה חדשה.`))
-                onPromoteToCategory(incidentId, name)
-            }}
+            onClick={() => setPending({ type: 'promote', incidentId, name })}
             className="text-gray-300 hover:text-blue-500 transition-colors p-0.5 leading-none"
             title="הפוך לקטגוריה"
           >
@@ -156,10 +178,7 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
         )}
         {onDeleteVolunteer && editMode && (
           <button
-            onClick={() => {
-              if (window.confirm(`למחוק את "${name}"?`))
-                onDeleteVolunteer(incidentId, name)
-            }}
+            onClick={() => setPending({ type: 'delete', incidentId, name })}
             className="text-gray-300 hover:text-red-500 transition-colors p-0.5 leading-none"
             title="מחק"
           >
@@ -230,36 +249,47 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">
-            נתוני השבוע
-            <span className="mr-2 text-xs font-normal text-muted-foreground">
-              {totalActions} פעולות · {groups.length} קטגוריות
-            </span>
-          </CardTitle>
-          {canEdit && (
-            <button
-              onClick={() => { setEditMode(m => !m); setEditing(null) }}
-              className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${editMode ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300'}`}
-              title={editMode ? 'סגור עריכה' : 'ערוך'}
-            >
-              <Pencil className="w-3 h-3" />
-              {editMode ? 'סגור עריכה' : 'עריכה'}
-            </button>
+    <>
+      <ConfirmDialog
+        open={!!pending}
+        title={confirmTitle()}
+        description={confirmDescription()}
+        confirmLabel="אישור"
+        cancelLabel="ביטול"
+        destructive={pending?.type === 'delete'}
+        onConfirm={confirmAction}
+        onCancel={() => setPending(null)}
+      />
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">
+              נתוני השבוע
+              <span className="mr-2 text-xs font-normal text-muted-foreground">
+                {totalActions} פעולות · {groups.length} קטגוריות
+              </span>
+            </CardTitle>
+            {canEdit && (
+              <button
+                onClick={() => { setEditMode(m => !m); setEditing(null) }}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${editMode ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300'}`}
+              >
+                <Pencil className="w-3 h-3" />
+                {editMode ? 'סגור עריכה' : 'עריכה'}
+              </button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {renderSection('אירועי חירום', emergencyGroups, 'text-red-600', canEdit && editMode, lastEmergencyIncidentId)}
+          {emergencyGroups.length > 0 && (extraGroups.length > 0 || regularGroups.length > 0) && (
+            <Separator />
           )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {renderSection('אירועי חירום', emergencyGroups, 'text-red-600', canEdit && editMode, lastEmergencyIncidentId)}
-        {emergencyGroups.length > 0 && (extraGroups.length > 0 || regularGroups.length > 0) && (
-          <Separator />
-        )}
-        {renderSection('קטגוריות נוספות', extraGroups, 'text-orange-600', canEdit && editMode)}
-        {extraGroups.length > 0 && regularGroups.length > 0 && <Separator />}
-        {renderSection('סטטיסטיקה שבועית', regularGroups, 'text-blue-600')}
-      </CardContent>
-    </Card>
+          {renderSection('קטגוריות נוספות', extraGroups, 'text-orange-600', canEdit && editMode)}
+          {extraGroups.length > 0 && regularGroups.length > 0 && <Separator />}
+          {renderSection('סטטיסטיקה שבועית', regularGroups, 'text-blue-600')}
+        </CardContent>
+      </Card>
+    </>
   )
 }
