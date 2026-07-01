@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { groupEvents, countTotalEvents } from '@/lib/summaryGenerator'
-import { Trash2, Tag } from 'lucide-react'
+import { Trash2, Tag, Pencil } from 'lucide-react'
 import type { Event, CategoryGroup } from '@/lib/types'
 
 interface Props {
@@ -26,6 +26,9 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
   const [editing, setEditing] = useState<EditingVolunteer | null>(null)
   const [editValue, setEditValue] = useState('')
   const [editSaving, setEditSaving] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+
+  const canEdit = !!(onRenameVolunteer || onDeleteVolunteer || onPromoteToCategory)
 
   const lastEmergencyIncidentId = useMemo(() => {
     const emergencyEvents = events.filter(e => e.source_type === 'emergency')
@@ -76,6 +79,7 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
       setEditing(null)
       return
     }
+    if (!window.confirm(`לשנות את "${editing.oldName}" ל-"${trimmed}"?`)) return
     setEditSaving(true)
     try {
       await onRenameVolunteer(editing.incidentId, editing.oldName, trimmed)
@@ -129,7 +133,7 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
     return (
       <span key={`${incidentId}::${name}`} className="inline-flex items-center gap-0.5">
         <span>{name}</span>
-        {onRenameVolunteer && (
+        {onRenameVolunteer && editMode && (
           <button
             onClick={() => startEdit(incidentId, name)}
             className="text-gray-300 hover:text-gray-500 transition-colors text-xs px-0.5 leading-none"
@@ -138,18 +142,24 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
             ✎
           </button>
         )}
-        {onPromoteToCategory && (
+        {onPromoteToCategory && editMode && (
           <button
-            onClick={() => onPromoteToCategory(incidentId, name)}
+            onClick={() => {
+              if (window.confirm(`להפוך את "${name}" לקטגוריה? השמות אחריו באותו אירוע ישויכו לקריאה חדשה.`))
+                onPromoteToCategory(incidentId, name)
+            }}
             className="text-gray-300 hover:text-blue-500 transition-colors p-0.5 leading-none"
-            title="הפוך לקטגוריה – השמות אחריו ישויכו לקריאה חדשה"
+            title="הפוך לקטגוריה"
           >
             <Tag className="w-3 h-3" />
           </button>
         )}
-        {onDeleteVolunteer && (
+        {onDeleteVolunteer && editMode && (
           <button
-            onClick={() => onDeleteVolunteer(incidentId, name)}
+            onClick={() => {
+              if (window.confirm(`למחוק את "${name}"?`))
+                onDeleteVolunteer(incidentId, name)
+            }}
             className="text-gray-300 hover:text-red-500 transition-colors p-0.5 leading-none"
             title="מחק"
           >
@@ -222,19 +232,31 @@ export function WeeklyDataView({ events, loading, onRenameVolunteer, onDeleteVol
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">
-          נתוני השבוע
-          <span className="mr-2 text-xs font-normal text-muted-foreground">
-            {totalActions} פעולות · {groups.length} קטגוריות
-          </span>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">
+            נתוני השבוע
+            <span className="mr-2 text-xs font-normal text-muted-foreground">
+              {totalActions} פעולות · {groups.length} קטגוריות
+            </span>
+          </CardTitle>
+          {canEdit && (
+            <button
+              onClick={() => { setEditMode(m => !m); setEditing(null) }}
+              className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${editMode ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300'}`}
+              title={editMode ? 'סגור עריכה' : 'ערוך'}
+            >
+              <Pencil className="w-3 h-3" />
+              {editMode ? 'סגור עריכה' : 'עריכה'}
+            </button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {renderSection('אירועי חירום', emergencyGroups, 'text-red-600', !!(onRenameVolunteer || onDeleteVolunteer || onPromoteToCategory), lastEmergencyIncidentId)}
+        {renderSection('אירועי חירום', emergencyGroups, 'text-red-600', canEdit && editMode, lastEmergencyIncidentId)}
         {emergencyGroups.length > 0 && (extraGroups.length > 0 || regularGroups.length > 0) && (
           <Separator />
         )}
-        {renderSection('קטגוריות נוספות', extraGroups, 'text-orange-600', !!(onRenameVolunteer || onDeleteVolunteer || onPromoteToCategory))}
+        {renderSection('קטגוריות נוספות', extraGroups, 'text-orange-600', canEdit && editMode)}
         {extraGroups.length > 0 && regularGroups.length > 0 && <Separator />}
         {renderSection('סטטיסטיקה שבועית', regularGroups, 'text-blue-600')}
       </CardContent>
