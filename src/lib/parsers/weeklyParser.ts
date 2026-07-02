@@ -60,7 +60,7 @@ export function parseWeekly(text: string): ParsedRow[] {
   return results
 }
 
-const VOLUNTEER_TOTAL_RE = /^(.+?)\s+(\d+)$/
+const VOLUNTEER_TOTAL_RE = /^(.+?)\s+(\d+)[א-ת]?$/
 
 /**
  * Extract the pre-computed volunteer totals section from a weekly report.

@@ -299,6 +299,11 @@ export default function DashboardPage() {
     await loadEvents(activeWeek.id)
   }
 
+  async function handleLeaderboardChange(totals: { name: string; count: number }[]) {
+    await supabase.from('settings').upsert([{ key: 'leaderboard_totals', value: JSON.stringify(totals) }])
+    setLeaderboardTotals(totals.length > 0 ? totals : null)
+  }
+
   async function handleDeleteWeek(weekId: string) {
     const isDeletingActive = weekId === activeWeek?.id
     const { error } = await supabase.from('weeks').delete().eq('id', weekId)
@@ -459,6 +464,7 @@ export default function DashboardPage() {
         <LeaderboardPanel
           events={events}
           leaderboardOverride={leaderboardTotals}
+          onLeaderboardChange={!isWeekClosed ? handleLeaderboardChange : undefined}
           weekLabel={
             activeWeek
               ? new Date(activeWeek.created_at).toLocaleDateString('he-IL', {

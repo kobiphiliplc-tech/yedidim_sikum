@@ -2,7 +2,9 @@
 
 import { useRef, useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { groupEvents, countTotalEvents, countUniqueVolunteers } from '@/lib/summaryGenerator'
+import { Pencil, Trash2, Plus, Check, X, ClipboardList } from 'lucide-react'
 import type { Event } from '@/lib/types'
 
 interface Props {
@@ -10,6 +12,7 @@ interface Props {
   weekLabel: string
   orgName: string
   leaderboardOverride?: { name: string; count: number }[] | null
+  onLeaderboardChange?: (totals: { name: string; count: number }[]) => Promise<void>
 }
 
 const BAR_COLORS = [
@@ -25,10 +28,17 @@ function WhatsAppIcon() {
   )
 }
 
-export function LeaderboardPanel({ events, weekLabel, orgName, leaderboardOverride }: Props) {
+export function LeaderboardPanel({ events, weekLabel, orgName, leaderboardOverride, onLeaderboardChange }: Props) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [sharing, setSharing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editMode, setEditMode] = useState(false)
+  const [editEntries, setEditEntries] = useState<{ name: string; count: number }[]>([])
+  const [newName, setNewName] = useState('')
+  const [newCount, setNewCount] = useState('')
+  const [pasteText, setPasteText] = useState('')
+  const [showPaste, setShowPaste] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const entries = useMemo(() => {
     if (leaderboardOverride && leaderboardOverride.length > 0) {
@@ -118,11 +128,63 @@ export function LeaderboardPanel({ events, weekLabel, orgName, leaderboardOverri
     }
   }
 
-  if (entries.length === 0) {
+  function openEdit() {
+    setEditEntries(entries.map(e => ({ name: e.name, count: e.value })))
+    setNewName('')
+    setNewCount('')
+    setEditMode(true)
+  }
+
+  async function saveEdit() {
+    if (!onLeaderboardChange) return
+    setSaving(true)
+    try {
+      await onLeaderboardChange(editEntries)
+      setEditMode(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function addEntry() {
+    const name = newName.trim()
+    const count = parseInt(newCount)
+    if (!name || !count || count <= 0) return
+    setEditEntries(prev => [...prev, { name, count }])
+    setNewName('')
+    setNewCount('')
+  }
+
+  function addFromPaste() {
+    const LINE_RE = /^(.+?)\s+(\d+)[א-ת]?$/
+    const parsed = pasteText
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .flatMap(l => {
+        const m = LINE_RE.exec(l)
+        if (!m) return []
+        const count = parseInt(m[2])
+        return count > 0 ? [{ name: m[1].trim(), count }] : []
+      })
+    if (parsed.length === 0) return
+    setEditEntries(prev => [...prev, ...parsed])
+    setPasteText('')
+    setShowPaste(false)
+  }
+
+  if (entries.length === 0 && !editMode) {
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">כוכבי השבוע ⭐</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">כוכבי השבוע ⭐</CardTitle>
+            {onLeaderboardChange && (
+              <button onClick={openEdit} className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors">
+                <Pencil className="w-3 h-3" /> עריכה
+              </button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-4">
@@ -137,9 +199,94 @@ export function LeaderboardPanel({ events, weekLabel, orgName, leaderboardOverri
     <>
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">כוכבי השבוע ⭐</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">כוכבי השבוע ⭐</CardTitle>
+            {onLeaderboardChange && (
+              <button
+                onClick={editMode ? () => setEditMode(false) : openEdit}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${editMode ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300'}`}
+              >
+                <Pencil className="w-3 h-3" />
+                {editMode ? 'סגור עריכה' : 'עריכה'}
+              </button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {editMode ? (
+            <div className="space-y-2" dir="rtl">
+              <div className="max-h-72 overflow-y-auto space-y-1">
+                {editEntries.map((entry, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      value={entry.name}
+                      onChange={e => setEditEntries(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
+                      className="flex-1 text-sm border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      dir="rtl"
+                    />
+                    <input
+                      type="number"
+                      value={entry.count}
+                      min={1}
+                      onChange={e => setEditEntries(prev => prev.map((x, j) => j === i ? { ...x, count: parseInt(e.target.value) || 1 } : x))}
+                      className="w-16 text-sm border rounded px-2 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    />
+                    <button onClick={() => setEditEntries(prev => prev.filter((_, j) => j !== i))} className="text-gray-300 hover:text-red-500 transition-colors p-1">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 border-t pt-2">
+                <input
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addEntry()}
+                  placeholder="שם מתנדב"
+                  className="flex-1 text-sm border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  dir="rtl"
+                />
+                <input
+                  type="number"
+                  value={newCount}
+                  onChange={e => setNewCount(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addEntry()}
+                  placeholder="כמות"
+                  min={1}
+                  className="w-16 text-sm border rounded px-2 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
+                />
+                <button onClick={addEntry} title="הוסף שורה" className="text-gray-400 hover:text-blue-500 transition-colors p-1">
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => setShowPaste(p => !p)} title="הדבק רשימה" className="text-gray-400 hover:text-blue-500 transition-colors p-1">
+                  <ClipboardList className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {showPaste && (
+                <div className="space-y-1">
+                  <textarea
+                    value={pasteText}
+                    onChange={e => setPasteText(e.target.value)}
+                    placeholder={'הדבק רשימה:\nשם מתנדב 15\nשם אחר 10\n...'}
+                    className="w-full text-sm border rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 min-h-[100px] font-mono"
+                    dir="rtl"
+                  />
+                  <Button size="sm" variant="outline" onClick={addFromPaste} disabled={!pasteText.trim()}>
+                    הוסף לרשימה
+                  </Button>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="outline" size="sm" onClick={() => setEditMode(false)} disabled={saving}>
+                  <X className="w-3 h-3 ml-1" /> ביטול
+                </Button>
+                <Button size="sm" onClick={saveEdit} disabled={saving}>
+                  <Check className="w-3 h-3 ml-1" /> {saving ? 'שומר...' : 'שמור'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+          <>
           <p className="text-sm text-muted-foreground">
             {topEntries.length} מובילים מתוך {entries.length} · {totalCalls} קריאות סה&quot;כ
           </p>
@@ -329,6 +476,8 @@ export function LeaderboardPanel({ events, weekLabel, orgName, leaderboardOverri
           </div>{/* end scroll wrapper */}
 
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+          </>
+          )}
         </CardContent>
       </Card>
 
