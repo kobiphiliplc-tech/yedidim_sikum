@@ -237,29 +237,35 @@ export function LeaderboardPanel({ events, weekLabel, orgName, leaderboardOverri
                   </div>
                 ))}
               </div>
-              <div className="flex items-center gap-2 border-t pt-2">
-                <input
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addEntry()}
-                  placeholder="שם מתנדב"
-                  className="flex-1 text-sm border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                  dir="rtl"
-                />
-                <input
-                  type="number"
-                  value={newCount}
-                  onChange={e => setNewCount(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addEntry()}
-                  placeholder="כמות"
-                  min={1}
-                  className="w-16 text-sm border rounded px-2 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
-                />
-                <button onClick={addEntry} title="הוסף שורה" className="text-gray-400 hover:text-blue-500 transition-colors p-1">
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => setShowPaste(p => !p)} title="הדבק רשימה" className="text-gray-400 hover:text-blue-500 transition-colors p-1">
-                  <ClipboardList className="w-3.5 h-3.5" />
+              <div className="border-t pt-2 space-y-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addEntry()}
+                    placeholder="שם מתנדב"
+                    className="flex-1 min-w-0 text-sm border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    dir="rtl"
+                  />
+                  <input
+                    type="number"
+                    value={newCount}
+                    onChange={e => setNewCount(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addEntry()}
+                    placeholder="כמות"
+                    min={1}
+                    className="w-14 text-sm border rounded px-2 py-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  />
+                  <button onClick={addEntry} title="הוסף שורה" className="text-gray-400 hover:text-blue-500 transition-colors p-1 flex-shrink-0">
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowPaste(p => !p)}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500 transition-colors"
+                >
+                  <ClipboardList className="w-3 h-3" />
+                  הדבק רשימה
                 </button>
               </div>
               {showPaste && (
